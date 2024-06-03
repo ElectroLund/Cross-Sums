@@ -10,13 +10,14 @@
 
 #SingleInstance force ; only one instance of script can run
 SetWorkingDir, %A_ScriptDir%		; My Documents
-debug := False		; local / network switch
+debug := True		; local / network switch
 
 #Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\GuiButtonIcon\GuiButtonIcon.ahk
 #Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\FileDialogs\FileDialogs.ahk
 #Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\AddTooltip\AddTooltip.ahk
 #Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\range.ahk
 #Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\ExploreObj.ahk
+#Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\ScrollBox\ScrollBox.ahk
 
 ;---------------------------
 ; experimentation
@@ -25,24 +26,24 @@ debug := False		; local / network switch
 If (debug)
 {
 	numbers := GetCollection(2)
-
-	; check here if we want to print unused digits
-	
-	DisplayCollection(numbers, 2)
-
+	DisplayCollection(numbers, 2, True)	; include unused digits
 
 	numbers := GetCollection(3)
+	DisplayCollection(numbers, 3, True)
 
-	DisplayCombinations(numbers, 3)
 	numbers := GetCollection(4)
-	DisplayCombinations(numbers, 4)
-	numbers := GetCollection(5)
-	DisplayCombinations(numbers, 5)
-	numbers := GetCollection(6)
-	DisplayCombinations(numbers, 6)
-	numbers := GetCollection(7)
-	DisplayCombinations(numbers, 7)
+	DisplayCollection(numbers, 4)
 
+	numbers := GetCollection(5)
+	DisplayCollection(numbers, 5)
+
+	numbers := GetCollection(6)
+	DisplayCollection(numbers, 6)
+
+	numbers := GetCollection(7)
+	DisplayCollection(numbers, 7)
+
+	Pause
 }
 
 
@@ -282,7 +283,7 @@ DisplayCombinations(combinations, numberDigits)
 {
 	size := combinations.MaxIndex()
 
-	OutputDebug, There are %size% combinations of %numberDigits% digits (no repeats, 1-9, order not important):
+	ReportString = There are %size% combinations of %numberDigits% digits (no repeats, 1-9, order not important): `n
 
 	For index, combination in combinations
 	{
@@ -294,34 +295,69 @@ DisplayCombinations(combinations, numberDigits)
 			Else
 				combinationString .= value
 				
-		OutputDebug, combination #%index%: %combinationString%
+		ReportString .= "combination #" . index . ": " . combinationString . "`n"
 	}
+
+	OutputDebug, % ReportString
+	ScrollBox(ReportString, "f{s9 cBlack, Arial} h500 w400 p w d c", "Digit Combinations")
 }
 
 ; parse through the collection object and print out the options along with their sum
-DisplayCollection(collection, numberDigits)
+; option to show unused digits, default off
+DisplayCollection(collection, numberDigits, showUnused := False)
 {
 	size := collection.MaxIndex()
 
-	OutputDebug, There are %size% sums for %numberDigits% digits (no repeats, 1-9, order not important):
+	ReportString = There are %size% sums for %numberDigits% digits (no repeats, 1-9, order not important): `n
 
 	Loop, %size%
 	{
-		collectionString := "sum " . collection[A_Index].sum . " has " . collection[A_Index].combinations.MaxIndex() . " combination of digits: `n"
-		OutputDebug, %collectionString%
+		; init unused array of booleans (true @ index = used, false = unused)
+		usedDigits := []
+
+		collectionString := "sum=" . collection[A_Index].sum . ": " . collection[A_Index].combinations.MaxIndex() . " combination of digits: `n"
 
 		For set, combination in collection[A_Index].combinations
 		{
 			Loop, %numberDigits%
 			{
+				; remove used digits
+				usedDigits[combination[A_Index]] := True
+
 				collectionString .= combination[A_Index]
 
 				If (A_Index < numberDigits)
 					collectionString .= "+"
 			}
 
-				
-		OutputDebug, collection #%index%: %collectionString%
+			collectionString .= "`n"
 		}
+
+		If (showUnused)
+		{
+			collectionString .= "Unused digits: "
+			firstUnused := False
+
+			Loop, 9
+			{
+				If (usedDigits[A_Index] <> True)
+				{					
+					If (firstUnused = False)
+					{
+						collectionString .= A_Index
+						firstUnused := True
+					}
+					Else
+						collectionString .=  ", " . A_Index
+				}
+			}
+
+			collectionString .= " `n"
+		}
+
+		ReportString .= collectionString
 	}
+
+	OutputDebug, % ReportString
+	ScrollBox(ReportString, "f{s9 cBlack, Arial} h500 w400 p w d c", "Sum Collections")
 }
