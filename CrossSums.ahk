@@ -10,7 +10,7 @@
 
 #SingleInstance force ; only one instance of script can run
 SetWorkingDir, %A_ScriptDir%		; My Documents
-debug := True		; local / network switch
+debug := False		; local / network switch
 
 #Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\GuiButtonIcon\GuiButtonIcon.ahk
 #Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\FileDialogs\FileDialogs.ahk
@@ -21,15 +21,18 @@ debug := True		; local / network switch
 ;---------------------------
 ; experimentation
 
+
+If (debug)
+{
 	numbers := GetCollection(2)
 
 	; check here if we want to print unused digits
 	
 	DisplayCollection(numbers, 2)
-	Pause
 
 
 	numbers := GetCollection(3)
+
 	DisplayCombinations(numbers, 3)
 	numbers := GetCollection(4)
 	DisplayCombinations(numbers, 4)
@@ -40,249 +43,8 @@ debug := True		; local / network switch
 	numbers := GetCollection(7)
 	DisplayCombinations(numbers, 7)
 
-Return
-
-
-
-
-
-
-
-Gosub, StartButton
-ExitApp
-
-;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-; Rob's coding work
-; the following is my own attempts
-
-RobsAlgorithm:
-
-	OutputDebug, % PrintNumbers(1)
-
-	OutputDebug, % GetNumber(9)
-	OutputDebug, % GetNumber(2)
-	OutputDebug, % GetNumber(7)
-
-Return
-
-; print all the numbers from 1 to 9 after N
-PrintNumbers(start)
-{
-	If (start = 10)
-		Return 
-	If (start >= 1)
-	{
-		OutputDebug, % start
-		PrintNumbers(start+1)
-	}
 }
 
-; print all the numbers from 1 to 9 after N
-GetNumber(num)
-{
-	If (num = 9)
-		Return 0
-	If (num <= 1)
-		Return 1
-	Else
-		val := GetNumber(num+1)
-	OutputDebug, % val
-Return val
-}
-
-digit_1 := 1
-digit_2 := 0
-
-FindDigit(digit_1, 4, digit_2, 0)
-
-; check all possible number sizes
-Loop, 9
-{
-	If A_Index = 1
-		Continue ; must be at least 2 digits
-
-	numDigits := A_Index
-	OutputDebug, Now searching for sums in all %numDigits% digit numbers
-
-	min := GetMinSum(numDigits)
-	max := GetMaxSum(numDigits)
-
-	; look for sums of this digit size
-	For targetSum in range(min, max+1)
-	{ 
-		; test the For loop
-		OutputDebug, sum loop cycle #%A_Index% (=%targetSum%)
-
-		; make a new array for this n-digit number
-		num := []
-		sum := 0
-
-		;*-**-**-*-**-*-*-*-*--*-*-*
-		; new idea
-		digits := []	; make a principal array for each digit
-		Loop, %numDigits%
-			digits[A_Index] := []	; make sub array for each possible digit
-
-		; test
-		digits[1][8] := 7
-		digits[2][3] := 7
-
-		;XXXXXXXXXXXXX starting right here, this needs to be recursive to some degree
-
-		; search all combinations of this digit size
-		Loop, %numDigits%
-		{
-			num[A_Index] := GetNextDigit(A_Index)
-
-			sum += num[A_Index]
-		}
-
-		; find valid digit combinations for this sum
-		If (sum = targetSum)
-		{
-			Loop, %numDigits%
-			{
-				str .= num[A_Index]
-				If A_Index < %numDigits%
-					str .= "+"
-			}
-
-			OutputDebug, we found valid combo! %str%
-		}
-	}
-}
-
-Return
-
-;------------------------
-; maximum sum would be the sum of the highest consecutive digts, since repeats aren't allowed
-GetMaxSum(num_digits)
-{
-	sum := 0
-	starting_digit := 9
-
-	Loop, %num_digits%
-		sum += (starting_digit - (A_Index - 1))
-
-	OutputDebug, maximum sum for %num_digits% digits = %sum% 
-		Return sum
-}
-
-;------------------------
-; minium sum would be the sum of the lowest consecutive digts, since repeats aren't allowed
-GetMinSum(num_digits)
-{
-	sum := 0
-	starting_digit := 1
-
-	Loop, %num_digits%
-		sum += (starting_digit + (A_Index - 1))
-
-	OutputDebug, minimum sum for %num_digits% digits = %sum% 
-		Return sum
-}
-
-;------------------------
-; simple loop finds the next available number to add
-GetNextDigit(digit)
-{
-	If (digit = 1)
-		Return digit
-
-	Loop, 9
-		If (A_Index > digit)
-		Return A_Index
-}
-
-FindDigit(lastDigit, numDigits, ByRef nextDigit, ByRef sum)
-{
-	If lastDigit = 9
-	{
-		nextDigit = 0
-		Return -1	; we've exceeded the max allowable 
-	}
-
-	For numbers in range(lastDigit+1, 9)
-	{
-		nextDigit := A_Index + lastDigit
-		Break		; quit immediately
-	}
-
-Return 1	; success
-}
-
-;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-RobsAlgorithm2:
-
-	digits := []
-	digits[17] := 1
-
-	digits[17] := []
-
-	digits[17][1] := 1
-	digits[17][2] := 7
-	digits[17][3] := 8
-	digits[17][4] := 4
-
-	DIGITS := 2
-
-	; by definition, the minimum sum of any unique digits, 1-9, would be 1+2
-	MIN_SUM := 1 + 2
-
-	; by definition, the maximum sum of any unique digits, 1-9, would be 1+2+..9
-	Loop, 9
-		MAX_SUM += A_Index
-
-	; loop through all the number of digits in the sum
-	Loop, 9
-	{
-		; by definition, we have to have at least 2 digits for a sum
-		If A_Index < 2
-			Continue
-
-		numDigits := A_Index
-
-		; now loop through all digits in the N-digit sum
-		Loop, 9
-		{
-			first_digit := A_Index
-
-			sum := first_digit
-
-			; now loop through remaining digits for addition
-			; now loop through all digits in the N-digit sum
-			Loop, 9
-			{
-				If (A_Index > first_digit)
-				{
-					sum := first_digit + A_Index
-					OutputDebug, %first_digit%+%A_Index% = %sum%
-				}
-
-				; now loop through remaining digits for addition
-			}
-		}
-
-		; now parse through all sum options
-		Loop, MAX_SUM
-		{
-			; skip until starting minimum sum
-			If A_Index < MIN_SUM
-				Continue
-
-			; now loop through all digits in the N-digit sum
-			Loop, 9
-			{
-				first_digit := A_Index
-
-				; now loop through remaining digits for addition
-				; Loop, 
-			}
-		}
-	}
-
-Return
 
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -297,9 +59,65 @@ AddTooltip(StartButtonID, "Create the listing of sums and print to a file in you
 
 Gui, Add, Checkbox, x200 y240 gBackupsCheckbox vBackupsCheckbox, Search archive locations?	; add below previous control
 
+Gui, Font, s14 norm bold, Arial
+Gui, Add, Text, cRed x245 y10 h20, Number of Digits
+
+Gui, Font, s16 norm cBlack
+Gui, Add, DropDownList, AltSubmit vPresetLocation gPresetLocation x30 y65 w150 hwndPresetID
+
+
+
+; parse the parts
+Loop, 9
+	If (A_Index > 1)
+		optionString .= A_Index . "|"
+
+; add the options
+GuiControl, , PresetLocation, %optionString%
+
+
+
+
+Gui, Show, w400 h370, Cross Sums Helper!
+Return
+
 GuiClose:
 ExitApp
 Return
+
+
+
+;--------------
+; Script log
+;--------------
+
+PresetLocation:
+
+GuiControlGet, PresetLocation
+
+If (PresetLocation = "")
+{
+	OutputDebug, no preset selected! `n
+}
+Else
+{
+	searchPath := stationPath[PresetLocation] . "\" . folderLogs . "\"		; add back slashes just in case
+	OutputDebug, preset drop down was selected (index = %PresetLocation%), path = %searchPath% `n
+
+	; also prep the archive folder
+	searchBackup := stationPath[PresetLocation] . "\" . folderLogBackups . "\"		; add back slashes just in case
+	OutputDebug, archive folder = %searchBackup% `n
+
+	; save the primary
+	searchPathPrimary := searchPath
+}
+
+GuiControl, Text, SearchPathDisplay, %searchPath%
+
+Return
+
+
+
 
 ;--------------
 ; Log mover GUI
