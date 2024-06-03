@@ -1,26 +1,31 @@
 /*
-
 	Cross Sums script!
 	This script simple generates a plain text list of all the groups of digits (1-9, no repeats) that add up to a given sum
 	Zero is not allowed as a digit. No blank spaces allowed (a 2-digit number must be full 2 digits).
 
 	Reference: https://teachinglondoncomputing.org/kriss-kross-puzzles/
-
+	
+	Dell Penny puzzle books: https://www.pennydellpuzzles.com/?s=cross+sums
 */
 
 #SingleInstance force ; only one instance of script can run
 SetWorkingDir, %A_ScriptDir%		; My Documents
-debug := True		; local / network switch
+debug := False		; debug switch to experiment, disables GUI
 
-#Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\GuiButtonIcon\GuiButtonIcon.ahk
-#Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\FileDialogs\FileDialogs.ahk
-#Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\AddTooltip\AddTooltip.ahk
-#Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\range.ahk
-#Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\ExploreObj.ahk
-#Include, C:\Users\rob.lund\OneDrive - Thermo Fisher Scientific\Documents\AutoHotkey\Lib\ScrollBox\ScrollBox.ahk
+; libraries
+#Include, %A_MyDocuments%\AutoHotkey\Lib\GuiButtonIcon\GuiButtonIcon.ahk
+#Include, %A_MyDocuments%\AutoHotkey\Lib\FileDialogs\FileDialogs.ahk
+#Include, %A_MyDocuments%\AutoHotkey\Lib\AddTooltip\AddTooltip.ahk
+#Include, %A_MyDocuments%\AutoHotkey\Lib\range.ahk
+#Include, %A_MyDocuments%\AutoHotkey\Lib\ExploreObj.ahk
+#Include, %A_MyDocuments%\AutoHotkey\Lib\ScrollBox\ScrollBox.ahk
 
-;---------------------------
+
+ScrollBoxSettings := "f{s9 cBlack, Arial} h400 w400 x400 p w d c"
+
+;===============
 ; experimentation
+;===============
 
 
 If (debug)
@@ -47,110 +52,87 @@ If (debug)
 }
 
 
-;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;===============
+; GUI creation
+;===============
+
+
+;----------
+; drop down menu
+
+Gui, Font, s14 norm bold, Arial
+Gui, Add, Text, x50 y25 h20, Number of Digits
+
+Gui, Font, s16 norm cBlack
+Gui, Add, DropDownList, vDigitsDropdown x50 y65 w50 hwndPresetID
+
+; make a drop down digit selector
+Loop, 9
+	If (A_Index > 1)
+		optionString .= A_Index . "|"
+GuiControl, , DigitsDropdown, %optionString%
+
+;----------
+; unused digits checkbox
+
+Gui, Font, s12 norm bold, Arial
+Gui, Add, Checkbox, x50 y140 vUnusedCheckbox, Show unused digits?
+
+;----------
+; Start button
+
+Gui, Font, s14 norm bold, Arial
+Gui, Add, Button, x100 y200 w100 h45 hwndStartButtonID vStartButton gStartButton, Start
+GuiButtonIcon(StartButtonID, "shell32.dll", 300, "s32 a1 r2")
+AddTooltip(StartButtonID, "Create the listing of sums and print to a file in your folder")
+
+;----------
+; optional file output dialog?
 
 ; MsgBox 0x40, Cross Sums Helper, Welcome to the Cross Sums helper!  This will generate a file with all the possible combinations of digits for a given sum.  `n`nOptions for output are either CSV (for importing into Excel to sort and "prettify" as you see fit) or text to be printed or pasted elsewhere.`n`nThe digits unused option can be disabled.
 
 ; OutputDirectory := ChooseFolder([0, "Where would you like to save the file?"], A_MyDocuments, , 0x02000000) ; Do not add the item being opened or saved to the recent documents list (SHAddToRecentDocs).
 
-Gui, Font, s12 norm bold, Arial
-Gui, Add, Button, x200 y270 w85 h38 hwndStartButtonID vStartButton gStartButton, Start
-GuiButtonIcon(StartButtonID, "shell32.dll", 259, "s32 a1 r2")
-AddTooltip(StartButtonID, "Create the listing of sums and print to a file in your folder")
+;----------
+; start GUI
 
-Gui, Add, Checkbox, x200 y240 gBackupsCheckbox vBackupsCheckbox, Search archive locations?	; add below previous control
-
-Gui, Font, s14 norm bold, Arial
-Gui, Add, Text, cRed x245 y10 h20, Number of Digits
-
-Gui, Font, s16 norm cBlack
-Gui, Add, DropDownList, AltSubmit vPresetLocation gPresetLocation x30 y65 w150 hwndPresetID
-
-
-
-; parse the parts
-Loop, 9
-	If (A_Index > 1)
-		optionString .= A_Index . "|"
-
-; add the options
-GuiControl, , PresetLocation, %optionString%
-
-
-
-
-Gui, Show, w400 h370, Cross Sums Helper!
+Gui, Show, w300 h275, Cross Sums Helper!
 Return
 
 GuiClose:
+Quit:
 ExitApp
-Return
-
-
-
-;--------------
-; Script log
-;--------------
-
-PresetLocation:
-
-GuiControlGet, PresetLocation
-
-If (PresetLocation = "")
-{
-	OutputDebug, no preset selected! `n
-}
-Else
-{
-	searchPath := stationPath[PresetLocation] . "\" . folderLogs . "\"		; add back slashes just in case
-	OutputDebug, preset drop down was selected (index = %PresetLocation%), path = %searchPath% `n
-
-	; also prep the archive folder
-	searchBackup := stationPath[PresetLocation] . "\" . folderLogBackups . "\"		; add back slashes just in case
-	OutputDebug, archive folder = %searchBackup% `n
-
-	; save the primary
-	searchPathPrimary := searchPath
-}
-
-GuiControl, Text, SearchPathDisplay, %searchPath%
-
-Return
-
-
 
 
 ;--------------
-; Log mover GUI
-;--------------
-BackupsCheckbox:
-
-Return
-
-;--------------
-; Log mover GUI
-;--------------
+; Start!
 
 StartButton:
 
-	TotalStartTime := A_TickCount
+; get all GUI variable values
+Gui, Submit, NoHide
 
-	;------------------------
-	; start algorithm
+OutputDebug, % DigitsDropdown
 
-	;------------------------
-	; log results
+OutputDebug, % UnusedCheckbox
 
-	TotalElapsedTime := (A_TickCount - TotalStartTime)/1000
-	logText = #### DONE - File created in %TotalElapsedTime% seconds
+OutputDebug, % StartButton
 
-	;------------------------
-	; open results
 
-	; Sleep, 750
-	Run, explore %OutputDirectory%
+If (DigitsDropdown = "")
+{
+	MsgBox 0x30, Error, Select a number of digits first!
+}
+Else
+{
+	numbers := GetCollection(DigitsDropdown)
+	DisplayCollection(numbers, DigitsDropdown, UnusedCheckbox)	; include unused digits
+}
 
 Return
+
+
+
 
 ;===============
 ; Helper Functions
@@ -281,6 +263,8 @@ AddSumToArray(arr, newSum)
 ; parse through the collection object and prints out the combinations only
 DisplayCombinations(combinations, numberDigits)
 {
+	global ScrollBoxSettings
+
 	size := combinations.MaxIndex()
 
 	ReportString = There are %size% combinations of %numberDigits% digits (no repeats, 1-9, order not important): `n
@@ -299,13 +283,15 @@ DisplayCombinations(combinations, numberDigits)
 	}
 
 	OutputDebug, % ReportString
-	ScrollBox(ReportString, "f{s9 cBlack, Arial} h500 w400 p w d c", "Digit Combinations")
+	ScrollBox(ReportString, ScrollBoxSettings, "Digit Combinations")
 }
 
 ; parse through the collection object and print out the options along with their sum
 ; option to show unused digits, default off
 DisplayCollection(collection, numberDigits, showUnused := False)
 {
+	global ScrollBoxSettings
+
 	size := collection.MaxIndex()
 
 	ReportString = There are %size% sums for %numberDigits% digits (no repeats, 1-9, order not important): `n
@@ -315,7 +301,7 @@ DisplayCollection(collection, numberDigits, showUnused := False)
 		; init unused array of booleans (true @ index = used, false = unused)
 		usedDigits := []
 
-		collectionString := "sum=" . collection[A_Index].sum . ": " . collection[A_Index].combinations.MaxIndex() . " combination of digits: `n"
+		collectionString := "sum=" . collection[A_Index].sum . ", " . collection[A_Index].combinations.MaxIndex() . " combinations of digits: `n"
 
 		For set, combination in collection[A_Index].combinations
 		{
@@ -359,5 +345,5 @@ DisplayCollection(collection, numberDigits, showUnused := False)
 	}
 
 	OutputDebug, % ReportString
-	ScrollBox(ReportString, "f{s9 cBlack, Arial} h500 w400 p w d c", "Sum Collections")
+	ScrollBox(ReportString, ScrollBoxSettings, "Sum Collections")
 }
