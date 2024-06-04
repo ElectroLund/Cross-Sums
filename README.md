@@ -11,21 +11,20 @@ I bought my first copy of a Dell Solver's Choice Variety Puzzle while boarding a
 
 # References
 
-https://www.pennydellpuzzles.com/?s=cross+sums
+Penny Dell Puzzles [cross sums web page](https://www.pennydellpuzzles.com/?s=cross+sums)
 
 # Application 
 
-![main window](main window.png)
+![main window](main_window.png "Main GUI window")
 
-![collections report](Sum Collections.png)
+![collections report](sum_collections.png "Sum report")
 
-![combinations report](Digit Combinations.png)
+![combinations report](digit_combinations.png "Digit combinations")
 
 
 # File Export 
 
-File export option prints a nice cheat sheet similar to the one PennyPress publishes on their website:
-https://www.pennydellpuzzles.com/wp-content/uploads/2019/01/sum-sample-page.pdf
+File export option prints a nice cheat sheet similar to the one PennyPress publishes [on their website](https://www.pennydellpuzzles.com/wp-content/uploads/2019/01/sum-sample-page.pdf)
 
 Sample output (with unused digits option enabled):
 
