@@ -6,6 +6,8 @@
 	Reference: https://teachinglondoncomputing.org/kriss-kross-puzzles/
 	
 	Dell Penny puzzle books: https://www.pennydellpuzzles.com/?s=cross+sums
+
+	File export option prints a nice cheat sheet similar to the one PennyPress publishes on their website
 */
 
 #SingleInstance force ; only one instance of script can run
@@ -21,7 +23,7 @@ debug := False		; debug switch to experiment, disables GUI
 #Include, %A_MyDocuments%\AutoHotkey\Lib\ScrollBox\ScrollBox.ahk
 
 
-ScrollBoxSettings := "f{s9 cBlack, Arial} h400 w400 x400 p w d c"
+ScrollBoxSettings := "f{s9 cBlack, Arial} h400 w400 x400 p w d c b1"
 
 ;===============
 ; experimentation
@@ -76,7 +78,13 @@ GuiControl, , DigitsDropdown, %optionString%
 ; unused digits checkbox
 
 Gui, Font, s12 norm bold, Arial
-Gui, Add, Checkbox, x50 y140 vUnusedCheckbox, Show unused digits?
+Gui, Add, Checkbox, x50 y120 vUnusedCheckbox, Show unused digits?
+
+;----------
+; file export checkbox
+
+Gui, Font, s12 norm bold, Arial
+Gui, Add, Checkbox, x50 y160 vExportCheckbox, Save to file?
 
 ;----------
 ; Start button
@@ -85,13 +93,6 @@ Gui, Font, s14 norm bold, Arial
 Gui, Add, Button, x100 y200 w100 h45 hwndStartButtonID vStartButton gStartButton, Start
 GuiButtonIcon(StartButtonID, "shell32.dll", 300, "s32 a1 r2")
 AddTooltip(StartButtonID, "Create the listing of sums and print to a file in your folder")
-
-;----------
-; optional file output dialog?
-
-; MsgBox 0x40, Cross Sums Helper, Welcome to the Cross Sums helper!  This will generate a file with all the possible combinations of digits for a given sum.  `n`nOptions for output are either CSV (for importing into Excel to sort and "prettify" as you see fit) or text to be printed or pasted elsewhere.`n`nThe digits unused option can be disabled.
-
-; OutputDirectory := ChooseFolder([0, "Where would you like to save the file?"], A_MyDocuments, , 0x02000000) ; Do not add the item being opened or saved to the recent documents list (SHAddToRecentDocs).
 
 ;----------
 ; start GUI
@@ -112,10 +113,10 @@ StartButton:
 ; get all GUI variable values
 Gui, Submit, NoHide
 
+; test GUI variable collection
 OutputDebug, % DigitsDropdown
-
 OutputDebug, % UnusedCheckbox
-
+OutputDebug, % ExportCheckbox
 OutputDebug, % StartButton
 
 
@@ -125,12 +126,25 @@ If (DigitsDropdown = "")
 }
 Else
 {
+	If (ExportCheckbox)
+	{
+		FileSelectFile, OutputFile, S, %A_MyDocuments%\Cross Sums options.csv, Cross Sums Helper, *.csv
+
+		; trap for cancel
+		If (ErrorLevel = 1)
+			Return
+		Else IfExist, %OutputFile%
+			FileDelete, %OutputFile%
+	}
+
 	numbers := GetCollection(DigitsDropdown)
-	DisplayCollection(numbers, DigitsDropdown, UnusedCheckbox)	; include unused digits
+	DisplayCollection(numbers, DigitsDropdown, UnusedCheckbox)
+	
+	If (ExportCheckbox)
+		PrintCollection(numbers, DigitsDropdown, UnusedCheckbox)
 }
 
 Return
-
 
 
 
@@ -139,6 +153,8 @@ Return
 ;===============
 
 
+
+;--------------
 GetCollection(numberDigits)
 {
 	StartTime := A_TickCount
@@ -195,6 +211,8 @@ GetCollection(numberDigits)
 	Return collection
 }
 
+
+;--------------
 GenerateCombinations(numberDigits, currentDigit, combination, combinations)
 {
 	If (numberDigits = 0)
@@ -216,6 +234,8 @@ GenerateCombinations(numberDigits, currentDigit, combination, combinations)
 	}
 }
 
+
+;--------------
 ; this function exists because "copying" an array into another array is done by reference in AHK, not true copying
 CopyArray(arr)
 {
@@ -227,6 +247,8 @@ CopyArray(arr)
 	Return result
 }
 
+
+;--------------
 ; sum the combination array 
 SumArray(arr)
 {
@@ -236,6 +258,8 @@ SumArray(arr)
 	Return sum
 }
 
+
+;--------------
 ; searches for sum in sum array. If we can't find, it's new and is inserted at the end. If we find it, returns index.  If sum should exist between two indexes, returns second index
 AddSumToArray(arr, newSum)
 {
@@ -260,6 +284,8 @@ AddSumToArray(arr, newSum)
 	Return foundIndex
 }
 
+
+;--------------
 ; parse through the collection object and prints out the combinations only
 DisplayCombinations(combinations, numberDigits)
 {
@@ -286,6 +312,8 @@ DisplayCombinations(combinations, numberDigits)
 	ScrollBox(ReportString, ScrollBoxSettings, "Digit Combinations")
 }
 
+
+;--------------
 ; parse through the collection object and print out the options along with their sum
 ; option to show unused digits, default off
 DisplayCollection(collection, numberDigits, showUnused := False)
@@ -324,10 +352,16 @@ DisplayCollection(collection, numberDigits, showUnused := False)
 			collectionString .= "Unused digits: "
 			firstUnused := False
 
+			; assume all used digits
+			allUsed := True
+
 			Loop, 9
 			{
 				If (usedDigits[A_Index] <> True)
 				{					
+					allUsed := False
+
+					; comma placement
 					If (firstUnused = False)
 					{
 						collectionString .= A_Index
@@ -338,6 +372,9 @@ DisplayCollection(collection, numberDigits, showUnused := False)
 				}
 			}
 
+			If (allUsed)
+				collectionString .=  "(none)"
+
 			collectionString .= " `n"
 		}
 
@@ -346,4 +383,76 @@ DisplayCollection(collection, numberDigits, showUnused := False)
 
 	OutputDebug, % ReportString
 	ScrollBox(ReportString, ScrollBoxSettings, "Sum Collections")
+}
+
+
+;--------------
+; parse through the collection object and print out the options along with their sum
+; option to show unused digits, default off
+PrintCollection(collection, numberDigits, showUnused := False)
+{
+	global OutputFile
+
+	size := collection.MaxIndex()
+
+	Loop, %size%
+	{
+		; init unused array of booleans (true @ index = used, false = unused)
+		usedDigits := []
+
+		collectionString := collection[A_Index].sum . " = "
+
+		For set, combination in collection[A_Index].combinations
+		{
+			Loop, %numberDigits%
+			{
+				; remove used digits
+				usedDigits[combination[A_Index]] := True
+
+				collectionString .= combination[A_Index]
+
+				If (A_Index < numberDigits)
+					collectionString .= "+"
+			}
+
+			collectionString .= "; `t"
+		}
+
+		If (showUnused)
+		{
+			unusedString := "("
+			firstUnused := False
+
+			; assume all used digits
+			allUsed := True
+
+			Loop, 9
+			{
+				If (usedDigits[A_Index] <> True)
+				{					
+					allUsed := False
+
+					; comma placement
+					If (firstUnused = False)
+					{
+						unusedString .= A_Index
+						firstUnused := True
+					}
+					Else
+						unusedString .=  ", " . A_Index
+				}
+			}
+
+			unusedString .= ")"
+
+			If (!allUsed)
+				collectionString .=  unusedString
+		}
+
+		collectionString .= "`n"
+
+		ReportString .= collectionString
+	}
+
+	FileAppend, %ReportString%, %OutputFile%
 }
