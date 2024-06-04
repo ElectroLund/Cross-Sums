@@ -16,10 +16,7 @@ debug := False		; debug switch to experiment, disables GUI
 
 ; libraries
 #Include, %A_MyDocuments%\AutoHotkey\Lib\GuiButtonIcon\GuiButtonIcon.ahk
-#Include, %A_MyDocuments%\AutoHotkey\Lib\FileDialogs\FileDialogs.ahk
 #Include, %A_MyDocuments%\AutoHotkey\Lib\AddTooltip\AddTooltip.ahk
-#Include, %A_MyDocuments%\AutoHotkey\Lib\range.ahk
-#Include, %A_MyDocuments%\AutoHotkey\Lib\ExploreObj.ahk
 #Include, %A_MyDocuments%\AutoHotkey\Lib\ScrollBox\ScrollBox.ahk
 
 
@@ -60,7 +57,7 @@ If (debug)
 
 
 ;----------
-; drop down menu
+; digit quantity drop down menu
 
 Gui, Font, s14 norm bold, Arial
 Gui, Add, Text, x50 y25 h20, Number of Digits
@@ -72,6 +69,8 @@ Gui, Add, DropDownList, vDigitsDropdown x50 y65 w50 hwndPresetID
 Loop, 9
 	If (A_Index > 1)
 		optionString .= A_Index . "|"
+	optionString .= "All"
+	
 GuiControl, , DigitsDropdown, %optionString%
 
 ;----------
@@ -137,11 +136,30 @@ Else
 			FileDelete, %OutputFile%
 	}
 
-	numbers := GetCollection(DigitsDropdown)
-	DisplayCollection(numbers, DigitsDropdown, UnusedCheckbox)
-	
-	If (ExportCheckbox)
-		PrintCollection(numbers, DigitsDropdown, UnusedCheckbox)
+	; check digit value
+	If DigitsDropdown is digit
+	{
+		numbers := GetCollection(DigitsDropdown)
+		DisplayCollection(numbers, DigitsDropdown, UnusedCheckbox)
+		
+		If (ExportCheckbox)
+			PrintCollection(numbers, DigitsDropdown, UnusedCheckbox)
+	}
+	; TODO: skip reporting?
+	Else If DigitsDropdown is alpha
+	{
+		Loop, 9
+		{
+			If (A_Index > 1)
+			{
+				numbers := GetCollection(A_Index)
+				DisplayCollection(numbers, A_Index, UnusedCheckbox)
+				
+				If (ExportCheckbox)
+					PrintCollection(numbers, A_Index, UnusedCheckbox)
+			}
+		}
+	}
 }
 
 Return
@@ -393,6 +411,9 @@ PrintCollection(collection, numberDigits, showUnused := False)
 {
 	global OutputFile
 
+	; header
+	ReportString := numberDigits . " DIGITS`n"
+
 	size := collection.MaxIndex()
 
 	Loop, %size%
@@ -400,7 +421,7 @@ PrintCollection(collection, numberDigits, showUnused := False)
 		; init unused array of booleans (true @ index = used, false = unused)
 		usedDigits := []
 
-		collectionString := collection[A_Index].sum . " = "
+		collectionString := collection[A_Index].sum . " = `t"
 
 		For set, combination in collection[A_Index].combinations
 		{
@@ -450,7 +471,6 @@ PrintCollection(collection, numberDigits, showUnused := False)
 		}
 
 		collectionString .= "`n"
-
 		ReportString .= collectionString
 	}
 
