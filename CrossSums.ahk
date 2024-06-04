@@ -118,7 +118,6 @@ OutputDebug, % UnusedCheckbox
 OutputDebug, % ExportCheckbox
 OutputDebug, % StartButton
 
-
 If (DigitsDropdown = "")
 {
 	MsgBox 0x30, Error, Select a number of digits first!
@@ -136,7 +135,13 @@ Else
 			FileDelete, %OutputFile%
 	}
 
-	; check digit value
+	; disable other controls until done
+	GuiControl, Disable, ExportCheckbox
+	GuiControl, Disable, UnusedCheckbox
+	GuiControl, Disable, DigitsDropdown
+	GuiControl, Disable, StartButton
+
+	; specific number of digits?
 	If DigitsDropdown is digit
 	{
 		numbers := GetCollection(DigitsDropdown)
@@ -145,15 +150,16 @@ Else
 		If (ExportCheckbox)
 			PrintCollection(numbers, DigitsDropdown, UnusedCheckbox)
 	}
-	; TODO: skip reporting?
+	; all digits?
 	Else If DigitsDropdown is alpha
 	{
+	; TODO: skip reporting?
 		Loop, 9
 		{
 			If (A_Index > 1)
 			{
 				numbers := GetCollection(A_Index)
-				DisplayCollection(numbers, A_Index, UnusedCheckbox)
+				; DisplayCollection(numbers, A_Index, UnusedCheckbox)
 				
 				If (ExportCheckbox)
 					PrintCollection(numbers, A_Index, UnusedCheckbox)
@@ -161,6 +167,12 @@ Else
 		}
 	}
 }
+
+; disable other controls until done
+GuiControl, Enable, ExportCheckbox
+GuiControl, Enable, UnusedCheckbox
+GuiControl, Enable, DigitsDropdown
+GuiControl, Enable, StartButton
 
 Return
 
@@ -175,6 +187,8 @@ Return
 ;--------------
 GetCollection(numberDigits)
 {
+	global ExportCheckbox
+
 	StartTime := A_TickCount
 
 	combinations := []
@@ -182,8 +196,11 @@ GetCollection(numberDigits)
 	
 	GenerateCombinations(numberDigits, 1, combination, combinations)
 
-	; print out the results
-	DisplayCombinations(combinations, numberDigits)
+	If (ExportCheckbox = False)
+	{
+		; print out the results
+		DisplayCombinations(combinations, numberDigits)
+	}
 
 	ElapsedTime := (A_TickCount - StartTime) / 1000
 	OutputDebug, %ElapsedTime% seconds have elapsed.
@@ -412,7 +429,7 @@ PrintCollection(collection, numberDigits, showUnused := False)
 	global OutputFile
 
 	; header
-	ReportString := numberDigits . " DIGITS`n"
+	ReportString := "`n" . numberDigits . " DIGITS`n"
 
 	size := collection.MaxIndex()
 
@@ -436,12 +453,12 @@ PrintCollection(collection, numberDigits, showUnused := False)
 					collectionString .= "+"
 			}
 
-			collectionString .= "; `t"
+			collectionString .= "`t"
 		}
 
 		If (showUnused)
 		{
-			unusedString := "("
+			unusedString := "{"
 			firstUnused := False
 
 			; assume all used digits
@@ -464,7 +481,7 @@ PrintCollection(collection, numberDigits, showUnused := False)
 				}
 			}
 
-			unusedString .= ")"
+			unusedString .= "}"
 
 			If (!allUsed)
 				collectionString .=  unusedString
